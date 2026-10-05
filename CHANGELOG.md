@@ -14,3 +14,4 @@
 - 增加顺序 Creator CLI Build、精确产物 hash/入口 Smoke、实际 Bootstrap 双向切换与保存故障回归工具；只使用新建 Edge 上下文及任务 Temp，不接入共享采集器。最终验收结果以本次任务对应源码 SHA 的回执为准。
 - 构建验收拒绝未完成、缺失或重复变体的回执；验收前绑定当前源码 HEAD、输入 manifest、构建配置及原始产物 hash。子进程启动后立即监听退出与启动失败，避免回执 IO 期间丢失事件；增加故障回归。仍未发布。
 - Edge 验收接入本机 Creator AI Companion 的既有 acquirePreviewPage 隔离入口，明确 mode=isolated、禁止复用浏览器/页面，仅释放自身 lease；不接入共享 daemon 或采集器。
+- 隔离 Edge 释放失败仍保存失败终态回执，并保留原始验收错误；增加关闭拒绝故障回归。

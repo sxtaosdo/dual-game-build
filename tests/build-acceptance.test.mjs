@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { validateBuildReceipt, verifyBuildArtifact, hashTree } from '../build-smoke.mjs';
 import { startCreatorProcess } from '../creator-build.mjs';
+import { finalizeRuntimeReceipt } from '../runtime-smoke.mjs';
 
 const sourceHead = 'a'.repeat(40), hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const receipt = () => ({ passed: true, state: 'complete', sourceHead, results: ['ant', 'cook', 'both'].map(variant => ({
@@ -80,4 +81,20 @@ test('synchronous spawn refusal becomes a terminal failure without an unhandled 
   const run = startCreatorProcess('fixture', [], () => { throw Error('launch denied'); });
   const result = await observe(run.completed);
   assert.equal(run.pid, null); assert.match(result.launchError, /launch denied/);
+});
+test('Edge release rejection still persists failed receipt and preserves the original validation failure', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'shidai3-release-receipt-'));
+  t.after(async () => {
+    assert(resolve(root).startsWith(resolve(tmpdir()) + '\\') || resolve(root).startsWith(resolve(tmpdir()) + '/'));
+    await rm(root, { recursive: true, force: true });
+  });
+  const error = Error('owned Edge close failed');
+  for (const original of [undefined, 'original validation failure']) {
+    const receipt = { passed: true, ...(original ? { failure: original } : {}) }, path = join(root, 'receipt.json');
+    const result = await finalizeRuntimeReceipt(path, receipt, { release: async () => { throw error; } });
+    assert.equal(result, error);
+    const saved = JSON.parse(await readFile(path, 'utf8'));
+    assert.equal(saved.passed, false); assert.equal(saved.cleanupFailure, String(error));
+    assert.equal(saved.failure, original ?? String(error));
+  }
 });

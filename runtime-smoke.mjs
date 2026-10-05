@@ -4,6 +4,15 @@ import { resolve, relative, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
 import assert from 'node:assert/strict';
 
+export async function finalizeRuntimeReceipt(path, receipt, lease) {
+  let cleanupError;
+  try { await lease?.release(); }
+  catch (error) {
+    cleanupError = error; receipt.cleanupFailure = String(error); receipt.passed = false;
+    receipt.failure ??= String(error);
+  } finally { await writeFile(path, JSON.stringify(receipt, null, 2) + '\n'); }
+  return cleanupError;
+}
 // Each run owns a fresh Edge browser context. It never reads a user's browser profile.
 export async function runtimeSmoke(url, receiptPath, playwrightPackage) {
   const target = new URL(url);
@@ -102,7 +111,11 @@ export async function runtimeSmoke(url, receiptPath, playwrightPackage) {
     }
     throw error;
   }
-  finally { await liveLease?.release(); await writeFile(path, JSON.stringify(receipt, null, 2) + '\n'); }
+  finally {
+    const originalFailure = receipt.failure;
+    const cleanupError = await finalizeRuntimeReceipt(path, receipt, liveLease);
+    if (cleanupError && !originalFailure) throw cleanupError;
+  }
   return receipt;
 }
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {
