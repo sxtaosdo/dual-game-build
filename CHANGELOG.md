@@ -6,7 +6,9 @@
 
 - 增加来源保真迁移清单和三种隔离构建输入。
 - 检查私有文件、根 meta、UUID 冲突、压缩脚本 UUID 和指向被排除玩法的序列化引用；共享遮罩纹理保留来源字节和 UUID，写入前验证清单路径、hash 与目标冲突。
-- 统一 plan/stage 选择，检查实际 Temp 父路径，复制后核对全部文件 hash 并写入审计 manifest。三种真实物理审计输入与9项工具测试通过；缺少 Bootstrap 的审计输入明确不可作为正式构建。
-- 增加 MK Provider 严格诊断与来源字节 baseline 的差异检查，不宣称 Provider 零诊断。Creator 正式构建与产物检查仍待执行。
+- 统一 plan/stage 选择，检查实际 Temp 父路径，复制后核对全部文件 hash 并写入审计 manifest。14 项工具测试通过；缺少 Bootstrap 的审计输入明确不可作为正式构建。
+- 增加 MK Provider 严格诊断与来源字节 baseline 的差异检查，不宣称 Provider 零诊断。
 
-- 修复审查中的保存续转、玩法关闭失败重试、旧 Owner 防护和 MVC 打开失败等待；保留未完成资源，已成功资源不重复释放。当前完整 Runtime/构建验收尚在进行。
+- 迁移按 Windows x64、本地 NTFS 合同使用父句柄相对创建/读写，拒绝重解析与已有目标；保留来源冻结、前后 Git/字节复核，不修改 ACL 或权限。失败保留部分输出。
+- 三种 Creator 编译首轮完成后，真实产物检查发现框架开发示例自动执行；隔离输入现精确排除固定 Provider 的 examples 子树，保留公共运行代码与来源 hash。
+- 增加顺序 Creator CLI Build、精确产物 hash/入口 Smoke、实际 Bootstrap 双向切换与保存故障回归工具；只使用新建 Edge 上下文及任务 Temp，不接入共享采集器。最终验收结果以本次任务对应源码 SHA 的回执为准。

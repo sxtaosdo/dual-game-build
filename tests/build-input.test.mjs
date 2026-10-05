@@ -35,6 +35,8 @@ async function fixture(t) {
   for (const path of Object.values(imports)) await put(path, '// provider fixture\n');
   await put('package.json', '{"name":"fixture","creator":{"version":"3.8.8"}}');
   await put('tsconfig.json', '{}');
+  await put('extensions/shidai3/assets/examples/run.ts', "throw Error('development entry must not run');\n");
+  await put('extensions/shidai3/assets/foundation-core/runtime.ts', 'export const providerRuntime = true;\n');
   return { root, source, shared, put, copy, destination: variant => join(root, variant) };
 }
 const entries = [
@@ -76,6 +78,9 @@ test('stage produces three physical inputs, shared bytes/UUID, runtime mapping a
     assert.equal(await readFile(join(output, 'import-map.json'), 'utf8'), await readFile(join(f.source, 'import-map.json'), 'utf8'));
     assert.equal(await missing(join(output, 'assets/Colony/ant.ts')), variant === 'cook');
     assert.equal(await missing(join(output, 'assets/bundles/game/cook.ts')), variant === 'ant');
+    assert.equal(await missing(join(output, 'extensions/shidai3/assets/examples/run.ts')), true);
+    assert.equal(await missing(join(output, 'extensions/shidai3/assets/foundation-core/runtime.ts')), false);
+    assert.deepEqual(manifest.providerExclusions.map(e => e.path), ['extensions/shidai3/assets/examples/run.ts']);
     const asset = f.shared.assets[0];
     assert.equal(hash(await readFile(join(output, asset.destination))), asset.sourceSha256);
     assert.equal(hash(await readFile(join(output, asset.destination + '.meta'))), asset.metaSha256);

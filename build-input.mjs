@@ -155,7 +155,11 @@ function selectedPaths(all, modes, promotions) {
     'extensions/MKFramework', 'extensions/shidai3', 'package.json', 'tsconfig.json', 'import-map.json'];
   if (modes.includes('ant')) scopes.push('assets/Colony', 'assets/Colony.meta');
   if (modes.includes('cook')) scopes.push('assets/bundles/game', 'assets/bundles/game.meta', 'assets/bundles.meta');
-  return all.filter(path => promotions.has(path) || scopes.some(scope => path === scope || path.startsWith(scope + '/')));
+  // Creator executes every imported script in a build. Provider example entry
+  // points are development material and must never become product boot code.
+  return all.filter(path => !path.startsWith('extensions/shidai3/assets/examples/')
+    && path !== 'extensions/shidai3/assets/examples.meta'
+    && (promotions.has(path) || scopes.some(scope => path === scope || path.startsWith(scope + '/'))));
 }
 export async function plan(project, variant) {
   const modes = VARIANTS[variant];
@@ -225,6 +229,8 @@ export async function stage(project, variant, destination, { requireBootstrap = 
   manifest.importMapValid = true;
   manifest.sharedConfigSha256 = shared.sha256;
   manifest.copiedFiles = copiedFiles;
+  manifest.providerExclusions = all.filter(path => path.startsWith('extensions/shidai3/assets/examples/') || path === 'extensions/shidai3/assets/examples.meta')
+    .map(path => ({ path, reason: 'Provider development examples are not product runtime' }));
   manifest.sharedPromotions = [...promotions].map(([from, to]) => ({ from, to, sha256: originalMap.get(to) }));
   await writeFile(join(output, 'BUILD_INPUT.json'), JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx' });
   return { output, manifestSha256: sha256(await readFile(join(output, 'BUILD_INPUT.json'))), ...validation };
