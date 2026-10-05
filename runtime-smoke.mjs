@@ -1,4 +1,4 @@
-import { createRequire } from 'node:module';
+import { acquirePreviewPage } from '../cocos-mcp/mcp/dist/companion/edge-session.js';
 import { writeFile } from 'node:fs/promises';
 import { resolve, relative, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -10,15 +10,15 @@ export async function runtimeSmoke(url, receiptPath, playwrightPackage) {
   if (!['localhost', '127.0.0.1', '192.168.31.100'].includes(target.hostname)) throw Error('Runtime smoke requires an explicitly supported local artifact/Preview URL');
   const path = resolve(receiptPath), rel = relative(resolve(tmpdir()), path);
   if (!rel || rel.startsWith('..') || isAbsolute(rel)) throw Error('Runtime receipt must stay in task Temp');
-  const { chromium } = createRequire(resolve(playwrightPackage))('playwright');
-  const browser = await chromium.launch({ channel: 'msedge', headless: true });
-  const receipt = { observedAt: new Date().toISOString(), url, browser: 'msedge', freshContexts: true, cases: [], passed: false };
-  let livePage, liveErrors, liveWarnings;
+  const receipt = { observedAt: new Date().toISOString(), url, browser: 'msedge', edgeChain: 'Creator AI Companion acquirePreviewPage', freshContexts: true, cases: [], passed: false };
+  let livePage, liveErrors, liveWarnings, liveLease;
   try {
     for (const scenario of ['ant', 'cook', 'cook-startup-failure']) {
       const initial = scenario === 'ant' ? 'ant' : 'cook', startupFailure = scenario === 'cook-startup-failure';
-      const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-      const page = await context.newPage(), errors = [], warnings = [];
+      const launch = new URL(url); launch.searchParams.set('mode', initial);
+      const lease = liveLease = await acquirePreviewPage(launch.href, { mode: 'isolated', viewport: { width: 390, height: 844 } });
+      assert.equal(lease.mode, 'isolated'); assert.equal(lease.reusedBrowser, false); assert.equal(lease.reusedPage, false);
+      const page = lease.page, errors = [], warnings = [];
       livePage = page; liveErrors = errors; liveWarnings = warnings;
       page.on('pageerror', e => errors.push(String(e)));
       page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); else if (m.type() === 'warning') warnings.push(m.text()); });
@@ -41,8 +41,7 @@ export async function runtimeSmoke(url, receiptPath, playwrightPackage) {
             saves: Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith('p4000.ant-cook.dev1.')).sort().map(k => [k, localStorage.getItem(k)])) };
         };
       }, startupFailure);
-      const launch = new URL(url); launch.searchParams.set('mode', initial);
-      await page.goto(launch.href, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await lease.ensureLoaded();
       const waitReady = mode => page.waitForFunction(mode => {
         const s = globalThis.__dualShell?.();
         return s?.coordinator?.currentMode === mode && !s.transitioning && s.coordinator.active?.ready && !s.coordinator.active?.inputLocked;
@@ -92,7 +91,7 @@ export async function runtimeSmoke(url, receiptPath, playwrightPackage) {
       assert.equal(errors.length, 0, JSON.stringify(errors));
       receipt.cases.push({ scenario, initial, startupBlocked, first, changed, second, returned, blocked, retry, sustained, errors, warnings, passed: true });
       await page.screenshot({ path: path.replace(/\.json$/, `-${scenario}-final.png`) });
-      await context.close();
+      await lease.release(); liveLease = null;
     }
     receipt.passed = true;
   } catch (error) {
@@ -103,7 +102,7 @@ export async function runtimeSmoke(url, receiptPath, playwrightPackage) {
     }
     throw error;
   }
-  finally { await browser.close(); await writeFile(path, JSON.stringify(receipt, null, 2) + '\n'); }
+  finally { await liveLease?.release(); await writeFile(path, JSON.stringify(receipt, null, 2) + '\n'); }
   return receipt;
 }
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {

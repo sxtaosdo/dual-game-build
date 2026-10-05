@@ -12,3 +12,5 @@
 - 迁移按 Windows x64、本地 NTFS 合同使用父句柄相对创建/读写，拒绝重解析与已有目标；保留来源冻结、前后 Git/字节复核，不修改 ACL 或权限。失败保留部分输出。
 - 三种 Creator 编译首轮完成后，真实产物检查发现框架开发示例自动执行；隔离输入现精确排除固定 Provider 的 examples 子树，保留公共运行代码与来源 hash。
 - 增加顺序 Creator CLI Build、精确产物 hash/入口 Smoke、实际 Bootstrap 双向切换与保存故障回归工具；只使用新建 Edge 上下文及任务 Temp，不接入共享采集器。最终验收结果以本次任务对应源码 SHA 的回执为准。
+- 构建验收拒绝未完成、缺失或重复变体的回执；验收前绑定当前源码 HEAD、输入 manifest、构建配置及原始产物 hash。子进程启动后立即监听退出与启动失败，避免回执 IO 期间丢失事件；增加故障回归。仍未发布。
+- Edge 验收接入本机 Creator AI Companion 的既有 acquirePreviewPage 隔离入口，明确 mode=isolated、禁止复用浏览器/页面，仅释放自身 lease；不接入共享 daemon 或采集器。
