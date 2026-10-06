@@ -101,7 +101,8 @@ export async function buildSmoke(buildReceipt, receiptPath, playwrightPackage, {
           }
           const state = await page.evaluate(() => {
             const n = cc.director.getScene().children.find(n => n.name === 'ProductShell'), s = n.components.find(c => c.constructor.name === 'ProductBootstrap');
-            return { mode: s.coordinator.currentMode, navigation: n.children.filter(n => n.name.startsWith('Switch_')).map(n => n.name), status: s.status.string };
+            const panel = n.getChildByName('ProductNavigation')?.getChildByName('NavigationPanel');
+            return { mode: s.coordinator.currentMode, navigation: panel?.children.filter(n => n.name.startsWith('Switch_')).map(n => n.name) ?? [], status: s.status.string };
           });
           assert.deepEqual(state.navigation.sort(), modes.map(id => `Switch_${id}`).sort()); assert.equal(errors.length, 0, JSON.stringify(errors)); assert.equal(externalRequests.length, 0);
           await page.screenshot({ path: receiptPath.replace(/\.json$/, `-${build.variant}-${request}.png`) });
