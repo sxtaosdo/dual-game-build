@@ -1,6 +1,6 @@
 # Dual Game Build
 
-**当前版本：`v0.3.0.5`**
+**当前版本：`v0.3.0.6`**
 
 状态: Draft
 
@@ -22,7 +22,7 @@ node build-input.mjs ../../P4000/ant-cook ant "$env:TEMP/shidai3-dual-game-build
 
 `migration.mjs` 仅将指定来源的业务 Bundle、唯一 MK、必要公共资源和测试材料复制到空的新产品路径，禁止覆盖；`MIGRATION_SOURCES.json` 保存来源 SHA、脏状态及索引 hash 和逐文件原字节 hash。
 
-Owner 已确认初始工具版本基线 0.3.0.0，正常版本 Hook 为本地检查点递增第四段；未配置远端或发布。
+Owner 已确认初始工具版本基线 0.3.0.0，正常版本 Hook 为本地检查点递增第四段；业务远端已建立；父仓以 submodule 挂载。
 
 `creator-build.mjs <ant-cook目录> <Creator可执行文件> <Temp回执路径>` 顺序构建三种隔离输入，记录源码 HEAD、输入/配置/产物 hash 和实际退出状态。Creator 的开发示例入口从输入排除，P0002 固定子模块不修改。该命令仅启动 CLI Build；临时用户配置、日志与输出在本任务 Temp。
 

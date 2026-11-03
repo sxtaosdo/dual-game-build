@@ -1,5 +1,7 @@
 # 更新日志
 
+2026-11-03：推送业务远端 git@github.com:sxtaosdo/dual-game-build.git，父仓登记 submodule。
+
 状态: Draft
 
 ## 未发布（初始版本基线 0.3.0.0；本地检查点按 Hook 递增）
