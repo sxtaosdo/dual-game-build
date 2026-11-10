@@ -10,6 +10,7 @@ import { migrate } from '../migration.mjs';
 import { pathLease } from '../path-lease.mjs';
 
 const taskTemp = resolve(tmpdir(), 'shidai3-dual-game-build');
+const windowsOnly = { skip: process.platform !== 'win32' && 'Requires native Windows path leases' };
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const git = (cwd, ...args) => execFileSync('git', ['--no-optional-locks', '-C', cwd, ...args], { stdio: 'pipe' });
 async function fixture(t) {
@@ -46,7 +47,7 @@ async function fixture(t) {
   return { root, output, ant, cook };
 }
 
-test('migration freezes selected source, preserves Git, refuses overwrite and reports saved manifest byte hash', async t => {
+test('migration freezes selected source, preserves Git, refuses overwrite and reports saved manifest byte hash', windowsOnly, async t => {
   const f = await fixture(t), before = git(f.ant, 'status', '--porcelain=v1', '-z');
   const result = await migrate(f.root, f.output), bytes = await readFile(join(f.output, 'MIGRATION_SOURCES.json'));
   assert.equal(result.manifestSha256, hash(bytes)); assert.equal(result.copiedFiles, 9);
@@ -56,7 +57,7 @@ test('migration freezes selected source, preserves Git, refuses overwrite and re
   await assert.rejects(migrate(f.root, f.output), /already exists/);
 });
 
-test('Windows path lease prevents destination ancestor substitution between checking and writing', async t => {
+test('Windows path lease prevents destination ancestor substitution between checking and writing', windowsOnly, async t => {
   const f = await fixture(t), external = join(f.root, 'external'); await mkdir(external);
   let attempted = false, denied = false;
   const watcher = watch(f.output, { recursive: true }, (_, path) => {
@@ -72,7 +73,7 @@ test('Windows path lease prevents destination ancestor substitution between chec
   } finally { watcher.close(); }
 });
 
-test('source junction and target/upstream junction are rejected before imported writes', async t => {
+test('source junction and target/upstream junction are rejected before imported writes', windowsOnly, async t => {
   for (const location of ['source', 'target', 'upstream']) {
     const f = await fixture(t), external = join(f.root, 'external'); await mkdir(external);
     let linked;
@@ -86,7 +87,7 @@ test('source junction and target/upstream junction are rejected before imported 
   }
 });
 
-test('preflight rejects an existing imported file without writing other selected content', async t => {
+test('preflight rejects an existing imported file without writing other selected content', windowsOnly, async t => {
   const f = await fixture(t); await mkdir(join(f.output, 'assets/Colony'), { recursive: true });
   await writeFile(join(f.output, 'assets/Colony/a.txt'), 'keep');
   await assert.rejects(migrate(f.root, f.output), /already exists/);
@@ -94,7 +95,7 @@ test('preflight rejects an existing imported file without writing other selected
   assert.equal(await stat(join(f.output, 'assets/bundles')).catch(() => null), null);
 });
 
-test('end snapshot detects already-dirty byte changes, inventory, HEAD, index and version changes', async t => {
+test('end snapshot detects already-dirty byte changes, inventory, HEAD, index and version changes', windowsOnly, async t => {
   for (const mutation of ['dirty-bytes', 'file-set', 'head', 'index', 'version']) {
     const f = await fixture(t), source = join(f.ant, 'assets/Colony/a.txt');
     // It was already dirty before migration: a second edit leaves porcelain unchanged.

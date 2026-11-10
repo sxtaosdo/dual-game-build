@@ -1,12 +1,12 @@
 # Dual Game Build
 
-**当前版本：`v0.3.0.6`**
+**当前版本：`v0.3.0.7`**
 
 状态: Draft
 
 为 `P4000/ant-cook` 生成 `ant`、`cook`、`both` 三种独立 Creator 输入。源工程不裁剪；未选玩法的脚本、资源和 UUID 从输入中排除。
 
-使用 Node 22，测试为 `node --test tests/*.test.mjs`。本目录安装的专用运行时在 `node_modules/node/bin/node.exe`，不修改全局 Node。
+使用本机 Node.js 26.13.0 起的 Node 26 版本，测试为 `npm test`。
 
 正式输入示例：
 
@@ -28,4 +28,4 @@ Owner 已确认初始工具版本基线 0.3.0.0，正常版本 Hook 为本地检
 
 `build-smoke.mjs <构建回执> <Temp验收回执> <Playwright所在package.json>` 在新建 Edge 上下文验证每种产物的入口与物理 Bundle 选择，并默认执行双玩法产物的实际往返/保存故障恢复。`runtime-smoke.mjs <本地Preview或产物URL> <Temp回执> <Playwright所在package.json>` 可独立执行相同运行回归。它们使用已安装的 Playwright，保持实际产物 hash，独立上下文不使用用户浏览器存档；不能将源码替身测试当作 Runtime 完成。不接入其他玩法或 P1060 采集器。
 
-迁移支持 Windows x64、本地 NTFS、Python 标准库和 Node 22。句柄相对创建/写入使用 OBJ_DONT_REPARSE，目标能力固定在获准的新产品目录，已有文件拒绝覆盖；保留来源冻结及前后 Git/字节复核。不修改 ACL 或特权，不保证管理员、驱动或设备映射篡改；失败保留部分输出，不自动回滚删除。
+迁移支持 Windows x64、本地 NTFS、Python 标准库和本机 Node 26。句柄相对创建/写入使用 OBJ_DONT_REPARSE，目标能力固定在获准的新产品目录，已有文件拒绝覆盖；保留来源冻结及前后 Git/字节复核。不修改 ACL 或特权，不保证管理员、驱动或设备映射篡改；失败保留部分输出，不自动回滚删除。

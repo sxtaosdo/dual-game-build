@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { collectReferences, inventory, plan, stage, verifyInput } from '../build-input.mjs';
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-const product = fileURLToPath(new URL('../../../P4000/ant-cook/', import.meta.url));
 const taskTemp = resolve(tmpdir(), 'shidai3-dual-game-build');
+const importSettings = JSON.stringify({ script: { importMap: 'project://import-map.json' } });
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const missing = async path => !(await stat(path).catch(() => null));
 async function fixture(t) {
@@ -18,26 +17,43 @@ async function fixture(t) {
     await rm(root, { recursive: true, force: true });
   });
   async function put(path, text) { await mkdir(dirname(join(source, path)), { recursive: true }); await writeFile(join(source, path), text); }
-  async function copy(from, to = from) { await mkdir(dirname(join(source, to)), { recursive: true }); await copyFile(join(product, from), join(source, to)); }
-  // Serialized assets/meta are copied unchanged from the authorized new project; no Creator assets are authored here.
-  const shared = JSON.parse(await readFile(join(product, 'SHARED_ASSETS.json'), 'utf8'));
-  await copy(shared.assets[0].source); await copy(shared.assets[0].source + '.meta');
-  await copy('assets/resources/Module/@Common/Mask/ResourcesCommonMask.prefab');
-  await copy('assets/Colony/popups/resultPopupNav.ts.meta', 'assets/Colony/ant.ts.meta');
-  await copy('assets/bundles/game/GameRoot.ts.meta', 'assets/bundles/game/cook.ts.meta');
+  const sourceAsset = 'assets/Colony/fixture.png';
+  const assetBytes = Buffer.from('fixture texture bytes');
+  const uuid = 'cb688f9c-b874-42d9-8aa3-f5e3d9aa42b2';
+  const meta = JSON.stringify({ uuid });
+  const shared = {
+    schemaVersion: 1,
+    assets: [{
+      source: sourceAsset,
+      destination: 'assets/resources/fixture.png',
+      uuid,
+      sourceSha256: hash(assetBytes),
+      metaSha256: hash(meta),
+    }],
+  };
+  await put(sourceAsset, assetBytes);
+  await put(sourceAsset + '.meta', meta);
+  await put('assets/resources/fixture.prefab', JSON.stringify([{ __uuid__: uuid }]));
+  await put('assets/Colony/ant.ts.meta', JSON.stringify({ uuid: 'c1123581-9a1b-4b5e-8b8a-123456789abc' }));
+  await put('assets/bundles/game/cook.ts.meta', JSON.stringify({ uuid: '7c2b9c83-0a19-41bd-8ddd-52dfa0dd8fe2' }));
   await put('assets/Colony/ant.ts', 'export const ant = true;\n');
   await put('assets/bundles/game/cook.ts', 'export const cook = true;\n');
   await put('assets/shell/buildModes.ts', 'export const BUILD_MODES = [];\n');
   await put('assets/shell/contracts.ts', 'export interface ModuleDescriptor { id: string }\n');
   await put('SHARED_ASSETS.json', JSON.stringify(shared));
-  await copy('import-map.json'); await copy('settings/v2/packages/project.json');
-  const imports = JSON.parse(await readFile(join(source, 'import-map.json'), 'utf8')).imports;
+  const imports = {
+    mk: './extensions/MKFramework/assets/MKFramework/Framework/MKInit.ts',
+    GlobalConfig: './extensions/MKFramework/assets/MKFramework/Config/GlobalConfig.ts',
+    globalEvent: './extensions/MKFramework/assets/MKFramework/Config/GlobalEvent.ts',
+  };
+  await put('import-map.json', JSON.stringify({ imports }));
+  await put('settings/v2/packages/project.json', importSettings);
   for (const path of Object.values(imports)) await put(path, '// provider fixture\n');
   await put('package.json', '{"name":"fixture","creator":{"version":"3.8.8"}}');
   await put('tsconfig.json', '{}');
   await put('extensions/shidai3/assets/examples/run.ts', "throw Error('development entry must not run');\n");
   await put('extensions/shidai3/assets/foundation-core/runtime.ts', 'export const providerRuntime = true;\n');
-  return { root, source, shared, put, copy, destination: variant => join(root, variant) };
+  return { root, source, shared, put, destination: variant => join(root, variant) };
 }
 const entries = [
   { path: 'assets/shell/contracts.ts', uuids: [], references: [] },
@@ -118,8 +134,9 @@ test('existing promoted destination, missing import-map and missing Bootstrap pr
   await f.put('settings/v2/packages/project.json', '{}');
   await assert.rejects(stage(f.source, 'ant', f.destination('no-map'), { requireBootstrap: false }), /script.importMap/);
   assert.equal(await missing(f.destination('no-map')), true);
-  await f.copy('settings/v2/packages/project.json');
-  await f.copy(f.shared.assets[0].source, f.shared.assets[0].destination);
+  await f.put('settings/v2/packages/project.json', importSettings);
+  const { source, destination } = f.shared.assets[0];
+  await f.put(destination, await readFile(join(f.source, source)));
   await assert.rejects(stage(f.source, 'both', f.destination('collision'), { requireBootstrap: false }), /Shared destination already exists/);
   assert.equal(await missing(f.destination('collision')), true);
 });
